@@ -1,67 +1,76 @@
-
+from database.setup import create_tables
 from database.connection import get_db_connection
+from models.article import Article
+from models.author import Author
+from models.magazine import Magazine
 
-class Article:
-    def __init__(self, article_id, title, content, author_id, magazine_id):
-        self.id = article_id
-        self._title = None
-        self.title = title
-        self.content = content
-        self.author_id = author_id
-        self.magazine_id = magazine_id
+def main():
+    create_tables()
 
-    @property
-    def title(self):
-        return self._title
+    author_name = input("Enter author's name: ")
+    magazine_name = input("Enter magazine name: ")
+    magazine_category = input("Enter magazine category: ")
+    article_title = input("Enter article title: ")
+    article_content = input("Enter article content: ")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT id FROM authors WHERE name = ?', (author_name,))
     
-    @title.setter
-    def title(self, title):
-        if hasattr(self, '_title') and self._title is not None:
-            raise AttributeError("Article title has already been set")
-        if not (isinstance(title, str) and 5 <= len(title) <= 50):
-            raise TypeError("Article title must be a string between 5 and 50 characters")
-        self._title = title
+    author_information = cursor.fetchone()
 
-    @property
-    def author(self):
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        sql = """
-            SELECT authors.id, authors.name
-            FROM articles
-            JOIN authors ON articles.author_id = authors.id
-            WHERE articles.id =?
-        """
-        cursor.execute(sql, (self.id,))
-        author = cursor.fetchone()
-        conn.close()
-        return author
     
-    @property
-    def magazine(self):
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        sql = """
-            SELECT magazines.id, magazines.name, magazines.category
-            FROM articles
-            JOIN magazines ON articles.magazine_id = magazines.id
-            WHERE articles.id =?
-        """
-        cursor.execute(sql, (self.id,))
-        magazine = cursor.fetchone()
-        conn.close()
-        return magazine
+    if author_information:
+        author_id = author_information[0]
+    else:
+        cursor.execute('INSERT INTO authors (name) VALUES (?)', (author_name,))
+        author_id = cursor.lastrowid
 
-    def add_to_articles():
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        sql = """
-            INSERT INTO articles(title, content, author_id, magazine_id)
-            VALUES (?,?,?,?)
-        """
-        cursor.execute(sql, (self.title, self.content, self.author_id, self.magazine_id))
-        conn.commit()
-        conn.close()
+    cursor.execute('SELECT id FROM magazines WHERE name = ?', (magazine_name,))
+    magazine_info = cursor.fetchone()
 
-    def __repr__(self):
-        return f'<Article {self.title}>'
+    if magazine_info:
+        magazine_id = magazine_info[0]
+    
+    else:
+        cursor.execute('INSERT INTO magazines (name, category) VALUES (?, ?)', (magazine_name, magazine_category))
+        magazine_id = cursor.lastrowid
+
+    conn.commit()
+    conn.close()
+
+    article = Article(None, article_title, article_content, author_id, magazine_id)
+
+    show_all()
+
+def show_all():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM authors LIMIT 5')
+    authors = cursor.fetchall()
+
+    cursor.execute('SELECT * FROM articles LIMIT 5')
+    articles = cursor.fetchall()
+
+    cursor.execute('SELECT * FROM magazines LIMIT 5')
+    magazines = cursor.fetchall()
+
+    conn.close()
+
+    print("\nMagazines:")
+    for magazine in magazines:
+        print(Magazine(magazine["id"], magazine["name"], magazine["category"]))
+
+    print("\nAuthors:")
+    for author in authors:
+        print(Author(author["id"], author["name"]))
+
+    print("\nArticles:")
+    for article in articles:
+        print(Article(article["id"], article["title"], article["content"], article["author_id"], article["magazine_id"]))
+
+    
+if __name__ == "__main__":
+    main()
