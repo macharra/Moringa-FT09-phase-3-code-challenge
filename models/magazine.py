@@ -40,9 +40,6 @@ class Magazine:
 
     @property
     def articles(self):
-        """
-        Property method to retrieve the articles of the magazine.
-        """
         from models.article import Article
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -60,9 +57,6 @@ class Magazine:
 
     @property
     def contributors(self):
-        """
-        Property method to retrieve the contributors of the magazine.
-        """
         from models.author import Author
         conn = get_db_connection()
         cursor = conn.cursor()
